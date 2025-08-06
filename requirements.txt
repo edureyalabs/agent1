@@ -1,9 +1,23 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-supabase==2.0.0
-crewai==0.41.1
-crewai-tools==0.4.26
-python-dotenv==1.0.0
-requests==2.31.0
-pydantic==2.5.0
-python-multipart==0.0.6
+# fastapi==0.104.1
+# uvicorn==0.24.0
+# supabase==2.0.0
+# # crewai==0.41.1
+# crewai==0.152.0
+# crewai-tools==0.4.26
+# python-dotenv==1.0.0
+# requests==2.31.0
+# pydantic==2.5.0
+# python-multipart==0.0.6
+
+fastapi==0.116.1               # You have this version already installed
+uvicorn==0.35.0                # You have this version installed
+supabase==2.17.0               # Already installed (you listed 2.0.0 — update or downgrade as needed)
+crewai==0.152.0                # Already installed
+crewai-tools==0.4.26           # You mentioned it, include explicitly
+python-dotenv==1.1.1           # Matches your installed version
+requests==2.32.4               # You have this version already
+pydantic==2.11.7               # Installed; higher than your example (2.5.0)
+python-multipart==0.0.6        # ✅ You can include this — even though not shown in your list, it's lightweight
+
+# Optional (but useful/required by many setups)
+gunicorn                       # Required for Render deployment
