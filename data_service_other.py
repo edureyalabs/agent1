@@ -1,5 +1,10 @@
 from supabase_client import supabase
 from typing import List, Dict, Any
+from fastapi import HTTPException
+from typing import Dict, Any
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+import traceback
 
 def fetch_task_chat_history(task_id: str) -> List[Dict[str, str]]:
     """Fetch chat history for a task"""
@@ -81,3 +86,48 @@ def verify_task_exists(task_id: str) -> bool:
     except Exception:
         return False    
     
+import datetime
+
+def create_streaming_chat_record(task_id: str) -> str:
+    """Insert empty streaming response and return its row ID"""
+    try:
+        result = supabase.table("s_taskchats").insert({
+            "task_id": task_id,
+            "role": "assistant",
+            "content": ""
+        }).execute()
+
+        inserted = result.data[0]
+        return inserted["id"]  # This becomes `stream_id`
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error creating stream record: {str(e)}")
+
+
+def update_streaming_content(stream_id: str, token: str) -> None:
+    """Append a token to the content of the agent's streaming response"""
+    try:
+        # Fetch current content
+        result = supabase.table("s_taskchats").select("content").eq("id", stream_id).single().execute()
+        current_content = result.data["content"] if result.data else ""
+
+        # Append token
+        updated_content = current_content + token
+
+        # Update in Supabase
+        supabase.table("s_taskchats").update({
+            "content": updated_content,
+            "updated_at": datetime.datetime.utcnow().isoformat()
+        }).eq("id", stream_id).execute()
+    except Exception as e:
+        print(f"Stream update error: {e}")
+
+
+def complete_streaming_response(stream_id: str, full_response: str) -> None:
+    """Overwrite the content with the final full agent response"""
+    try:
+        supabase.table("s_taskchats").update({
+            "content": full_response,
+            "updated_at": datetime.datetime.utcnow().isoformat()
+        }).eq("id", stream_id).execute()
+    except Exception as e:
+        print(f"Stream finalize error: {e}")

@@ -78,6 +78,47 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "message": "API is running"}
 
+# from fastapi import APIRouter, BackgroundTasks, HTTPException
+# from your_module import verify_task_exists, get_task_status, insert_user_message, update_task_status, run_streaming_agent_logic
+
+# router = APIRouter()
+
+# @router.post("/stream-task/")
+# async def process_task_message_streaming(
+#     task_id: str,
+#     agent_id: str,
+#     user_message: str,
+#     background_tasks: BackgroundTasks
+# ):
+#     """
+#     Starts background agent streaming for a task
+#     """
+#     try:
+#         if not verify_task_exists(task_id):
+#             raise HTTPException(status_code=404, detail="Task not found")
+
+#         if get_task_status(task_id) == "agent_processing":
+#             raise HTTPException(status_code=400, detail="Task already processing")
+
+#         insert_user_message(task_id, user_message)
+#         update_task_status(task_id, "agent_processing")
+
+#         # Launch background stream
+#         background_tasks.add_task(run_streaming_agent_logic, agent_id, task_id, user_message)
+
+#         return {
+#             "success": True,
+#             "message": "Streaming started",
+#             "task_id": task_id,
+#             "status": "agent_processing"
+#         }
+
+#     except Exception as e:
+#         update_task_status(task_id, "error")
+#         raise HTTPException(status_code=500, detail=str(e))
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
+
