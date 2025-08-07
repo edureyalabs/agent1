@@ -9,6 +9,7 @@ from data_service_other import (
     verify_task_exists,
     create_streaming_chat_record,
     update_streaming_content,
+    complete_streaming_response
 )
 from fastapi import HTTPException
 import asyncio
