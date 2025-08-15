@@ -30,112 +30,112 @@ async def root():
         "status": "running"
     }
 
-from fastapi import HTTPException
-from pydantic import BaseModel
-from groq import AsyncGroq
-import os
-import asyncio
-from supabase import create_client
+# from fastapi import HTTPException
+# from pydantic import BaseModel
+# from groq import AsyncGroq
+# import os
+# import asyncio
+# from supabase import create_client
 
-# Supabase client
-supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
+# # Supabase client
+# supabase = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_KEY"])
 
-# Groq client
-client = AsyncGroq(api_key=os.environ["GROQ_API_KEY"])
+# # Groq client
+# client = AsyncGroq(api_key=os.environ["GROQ_API_KEY"])
 
-# class TaskMessage(BaseModel):
-#     task_id: str
-#     agent_id: str
-#     user_message: str
-
-@app.post("/process-task")
-async def process_task(task_data: TaskMessage):
-    try:
-        # 1️⃣ Verify task exists
-        task = supabase.table("s_tasks").select("*").eq("id", task_data.task_id).execute()
-        if not task.data:
-            raise HTTPException(status_code=404, detail="Task not found")
-
-        # 2️⃣ Insert the user message
-        supabase.table("s_taskchats").insert({
-            "task_id": task_data.task_id,
-            "task_prompt": task_data.user_message,
-            "is_streaming": False,
-            "stream_completed": True
-        }).execute()
-
-        # 3️⃣ Insert empty row for agent response
-        agent_msg = supabase.table("s_taskchats").insert({
-            "task_id": task_data.task_id,
-            "task_prompt": None,
-            "response": None,
-            "partial_content": "",
-            "is_streaming": True,
-            "stream_completed": False
-        }).execute()
-
-        agent_msg_id = agent_msg.data[0]["id"]
-
-        # 4️⃣ Stream tokens from Groq and update DB
-        final_text = ""
-        stream = await client.chat.completions.create(
-            messages=[{"role": "user", "content": task_data.user_message}],
-            model="llama3-8b-8192",
-            stream=True
-        )
-
-        async for chunk in stream:
-            token = chunk.choices[0].delta.content or ""
-            if token:
-                final_text += token
-                supabase.table("s_taskchats").update({
-                    "partial_content": final_text
-                }).eq("id", agent_msg_id).execute()
-
-        # 5️⃣ Mark stream as completed and save final response
-        supabase.table("s_taskchats").update({
-            "response": final_text,
-            "is_streaming": False,
-            "stream_completed": True
-        }).eq("id", agent_msg_id).execute()
-
-        # 6️⃣ Update task status
-        supabase.table("s_tasks").update({"task_status": "agent_responded"}).eq("id", task_data.task_id).execute()
-
-        return {
-            "success": True,
-            "message": "Task processed successfully",
-            "task_id": task_data.task_id,
-            "status": "agent_responded",
-            "agent_response": final_text
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
-
+# # class TaskMessage(BaseModel):
+# #     task_id: str
+# #     agent_id: str
+# #     user_message: str
 
 # @app.post("/process-task")
 # async def process_task(task_data: TaskMessage):
-#     """
-#     Process a task message with CrewAI agent
-    
-#     - **task_id**: ID of the task
-#     - **agent_id**: ID of the agent to use
-#     - **user_message**: Message from the user
-#     """
 #     try:
-#         result = await process_task_message(
-#             task_id=task_data.task_id,
-#             agent_id=task_data.agent_id,
-#             user_message=task_data.user_message
+#         # 1️⃣ Verify task exists
+#         task = supabase.table("s_tasks").select("*").eq("id", task_data.task_id).execute()
+#         if not task.data:
+#             raise HTTPException(status_code=404, detail="Task not found")
+
+#         # 2️⃣ Insert the user message
+#         supabase.table("s_taskchats").insert({
+#             "task_id": task_data.task_id,
+#             "task_prompt": task_data.user_message,
+#             "is_streaming": False,
+#             "stream_completed": True
+#         }).execute()
+
+#         # 3️⃣ Insert empty row for agent response
+#         agent_msg = supabase.table("s_taskchats").insert({
+#             "task_id": task_data.task_id,
+#             "task_prompt": None,
+#             "response": None,
+#             "partial_content": "",
+#             "is_streaming": True,
+#             "stream_completed": False
+#         }).execute()
+
+#         agent_msg_id = agent_msg.data[0]["id"]
+
+#         # 4️⃣ Stream tokens from Groq and update DB
+#         final_text = ""
+#         stream = await client.chat.completions.create(
+#             messages=[{"role": "user", "content": task_data.user_message}],
+#             model="llama3-8b-8192",
+#             stream=True
 #         )
-#         return result
+
+#         async for chunk in stream:
+#             token = chunk.choices[0].delta.content or ""
+#             if token:
+#                 final_text += token
+#                 supabase.table("s_taskchats").update({
+#                     "partial_content": final_text
+#                 }).eq("id", agent_msg_id).execute()
+
+#         # 5️⃣ Mark stream as completed and save final response
+#         supabase.table("s_taskchats").update({
+#             "response": final_text,
+#             "is_streaming": False,
+#             "stream_completed": True
+#         }).eq("id", agent_msg_id).execute()
+
+#         # 6️⃣ Update task status
+#         supabase.table("s_tasks").update({"task_status": "agent_responded"}).eq("id", task_data.task_id).execute()
+
+#         return {
+#             "success": True,
+#             "message": "Task processed successfully",
+#             "task_id": task_data.task_id,
+#             "status": "agent_responded",
+#             "agent_response": final_text
+#         }
+
 #     except HTTPException:
 #         raise
 #     except Exception as e:
 #         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
+
+
+@app.post("/process-task")
+async def process_task(task_data: TaskMessage):
+    """
+    Process a task message with CrewAI agent
+    
+    - **task_id**: ID of the task
+    - **agent_id**: ID of the agent to use
+    - **user_message**: Message from the user
+    """
+    try:
+        result = await process_task_message(
+            task_id=task_data.task_id,
+            agent_id=task_data.agent_id,
+            user_message=task_data.user_message
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 @app.get("/task-status/{task_id}")
 async def get_task_status_endpoint(task_id: str) -> TaskStatusResponse:
